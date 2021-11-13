@@ -98,13 +98,29 @@ if __name__ == '__main__':
     start = time.time()
     logging.info('begin generating the polulation')
     for ite in range(args.population_size):
-        arch = explorer.random_spec()
+        
+        # Packs an adjacency matrix and related operations. The Adjacency matrix is that of a DAG
+        arch = explorer.random_spec() 
+
+        # gets model -> inits -> creates opt, loss func -> iter and train, update weights, repeat -> losses from 3 layers are computed every cycle, added and returned at the end
         losses = evaluator.evaluate(task,model_builder,arch)
+        
+        # append architecture and corresponding final loss 
         population.append([arch,losses[-1]])
+
         benchmarks.append([str(arch),losses[-1]])
         logging.info("%d %f",ite,losses[-1])
     logging.info('begin mutation')
+
+    # Perform mutation over population by choosing size specified by tournament_size
     for ite in range(args.evolve_size):
+        """
+        EA follows the following flow: 
+            1. Select -> Select a few samples from the population
+            2. Crossover -> Not done here. The best architecture is picked and pushed into mutation
+            3. Mutation -> Connections are flipped at 1/NUM_VERTICES probability
+            4. Update -> Append this to the population and pop out the oldest one (FIFO)
+        """
         sample = random.sample(population, args.tournament_size)
         best_arch = sorted(sample, key=lambda i:i[1])[0][0]
         arch = explorer.mutate_spec(best_arch)
@@ -114,6 +130,9 @@ if __name__ == '__main__':
         logging.info("%d %f",ite,losses[-1])
         benchmarks.append([str(arch),losses[-1]])
     results = benchmarks
+    
+    # TODO Population is typically a collection of 50 top performing networks after mutation. Take the architectures from population, sort as per losses, get best 10 models and visualize.
+
     with open(os.path.join(path,'record.json'),'w') as t:
         json.dump(results,t)
     logging.info('end:%f'%(time.time()-start))
